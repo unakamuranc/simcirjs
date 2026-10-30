@@ -1,0 +1,116 @@
+<!doctype html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html;charset=UTF-8" />
+    <script
+      src="https://code.jquery.com/jquery-3.2.1.min.js"
+      integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+      crossorigin="anonymous"></script>
+    <script type="text/javascript" src="simcir.js"></script>
+    <link rel="stylesheet" type="text/css" href="simcir.css" />
+    <script type="text/javascript" src="simcir-basicset.js"></script>
+    <link rel="stylesheet" type="text/css" href="simcir-basicset.css" />
+    <script type="text/javascript" src="simcir-library.js"></script>
+    <script type="text/javascript" src="vattend-client.js"></script>
+    <script type="text/javascript">
+$(function() {
+
+  var $s = simcir;
+  var $simcir = $('#mySimcir');
+  var $status = $('#status');
+  var $list = $('#circuitList');
+  var $name = $('#circuitName');
+
+  var getCircuitData = function() {
+    return JSON.parse($s.controller($simcir.find('.simcir-workspace') ).text() );
+  };
+  var setCircuitData = function(data) {
+    $s.setupSimcir($simcir, data);
+  };
+  var message = function(text) { $status.text(text); };
+
+  var refreshList = function() {
+    return vattend.list().then(function(items) {
+      $list.empty();
+      items.forEach(function(c) {
+        $('<option>').val(c.id).text(c.name + '  (' + c.updated_at.slice(0, 16).replace('T', ' ') + ')').
+          data('name', c.name).appendTo($list);
+      });
+    });
+  };
+
+  var render = function() {
+    var loggedIn = vattend.isLoggedIn();
+    $('#loginBtn').toggle(!loggedIn);
+    $('#logoutBtn').toggle(loggedIn);
+    $('.cloud-ops').toggle(loggedIn);
+    if (!loggedIn) { message('ログインすると回路を保存できます'); return; }
+    vattend.me().then(function(me) {
+      message(me.name + ' としてログイン中');
+      return refreshList();
+    }).catch(function() { render(); });
+  };
+
+  var run = function(promise, okText) {
+    return promise.then(function(r) {
+      if (okText) { message(okText); }
+      return r;
+    }).catch(function(e) {
+      message('エラー: ' + e.message);
+      if (!vattend.isLoggedIn() ) { render(); }
+    });
+  };
+
+  $('#loginBtn').click(function() { vattend.login(); });
+  $('#logoutBtn').click(function() { vattend.logout(); render(); });
+
+  $('#saveBtn').click(function() {
+    var name = $.trim($name.val() );
+    if (!name) { message('名前を入力してください'); return; }
+    run(vattend.save(name, getCircuitData() ), '保存しました: ' + name).then(refreshList);
+  });
+
+  $('#loadBtn').click(function() {
+    var id = $list.val();
+    if (!id) { return; }
+    run(vattend.get(id), '読み込みました').then(function(c) {
+      if (!c) { return; }
+      setCircuitData(c.data);
+      $name.val(c.name);
+    });
+  });
+
+  $('#deleteBtn').click(function() {
+    var $opt = $list.find('option:selected');
+    if (!$opt.length || !confirm('「' + $opt.data('name') + '」を削除しますか?') ) { return; }
+    run(vattend.remove($opt.val() ), '削除しました').then(refreshList);
+  });
+
+  setCircuitData({ width: 800, height: 400 });
+
+  vattend.handleRedirect().catch(function(e) {
+    message('ログインに失敗しました: ' + e.message);
+  }).then(function() {
+    if (!/^ログインに失敗/.test($status.text() ) ) { render(); }
+    else { $('#loginBtn').show(); }
+  });
+});
+    </script>
+    <title>SimcirJS</title>
+  </head>
+  <body>
+    <div style="margin-bottom:8px;">
+      <span id="status"></span>
+      <button id="loginBtn" style="display:none;">vattend でログイン</button>
+      <button id="logoutBtn" style="display:none;">ログアウト</button>
+    </div>
+    <div class="cloud-ops" style="display:none; margin-bottom:8px;">
+      <input id="circuitName" type="text" maxlength="100" placeholder="回路名" />
+      <button id="saveBtn">保存</button>
+      <select id="circuitList"></select>
+      <button id="loadBtn">読み込み</button>
+      <button id="deleteBtn">削除</button>
+    </div>
+    <div id="mySimcir"></div>
+  </body>
+</html>
