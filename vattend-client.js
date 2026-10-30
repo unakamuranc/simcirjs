@@ -122,7 +122,7 @@ var vattend = (function() {
   var api = function(method, path, body) {
     return getAccessToken().then(function(token) {
       if (!token) { throw new Error('not logged in'); }
-      var opts = { method: method, headers: { Authorization: 'Bearer ' + token } };
+      var opts = { method: method, cache: 'no-store', headers: { Authorization: 'Bearer ' + token } };
       if (body !== undefined) {
         opts.headers['Content-Type'] = 'application/json';
         opts.body = JSON.stringify(body);

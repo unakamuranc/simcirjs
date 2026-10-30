@@ -31,11 +31,15 @@ $(function() {
 
   var refreshList = function() {
     return vattend.list().then(function(items) {
+      var selected = $list.val();
       $list.empty();
       items.forEach(function(c) {
         $('<option>').val(c.id).text(c.name + '  (' + c.updated_at.slice(0, 16).replace('T', ' ') + ')').
           data('name', c.name).appendTo($list);
       });
+      if (selected) { $list.val(selected); }
+    }).catch(function(e) {
+      message('一覧の取得に失敗しました: ' + e.message);
     });
   };
 
