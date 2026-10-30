@@ -103,10 +103,8 @@ $(function() {
     width: Math.max(600, window.innerWidth - 40),
     height: Math.max(400, window.innerHeight - 100)
   });
-  var loginFailed = false;
 
   vattend.handleRedirect().catch(function(e) {
-    loginFailed = true;
     message('ログインに失敗しました: ' + e.message, true);
   }).then(function() {
     render();
