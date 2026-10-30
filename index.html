@@ -12,6 +12,8 @@
     <link rel="stylesheet" type="text/css" href="simcir-basicset.css" />
     <script type="text/javascript" src="simcir-library.js"></script>
     <script type="text/javascript" src="vattend-client.js"></script>
+    <link rel="stylesheet" type="text/css" href="style.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script type="text/javascript">
 $(function() {
 
@@ -27,7 +29,14 @@ $(function() {
   var setCircuitData = function(data) {
     $s.setupSimcir($simcir, data);
   };
-  var message = function(text) { $status.text(text); };
+  var toastTimer = null;
+  var message = function(text, isError) {
+    var $t = $('#toast');
+    $t.text(text).toggleClass('error', !!isError).addClass('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function() { $t.removeClass('show'); }, isError ? 5000 : 2500);
+  };
+  var setUser = function(text) { $status.text(text); };
 
   var refreshList = function() {
     return vattend.list().then(function(items) {
@@ -39,7 +48,7 @@ $(function() {
       });
       if (selected) { $list.val(selected); }
     }).catch(function(e) {
-      message('一覧の取得に失敗しました: ' + e.message);
+      message('一覧の取得に失敗しました: ' + e.message, true);
     });
   };
 
@@ -48,9 +57,9 @@ $(function() {
     $('#loginBtn').toggle(!loggedIn);
     $('#logoutBtn').toggle(loggedIn);
     $('.cloud-ops').toggle(loggedIn);
-    if (!loggedIn) { message('ログインすると回路を保存できます'); return; }
+    if (!loggedIn) { setUser(''); return; }
     vattend.me().then(function(me) {
-      message(me.name + ' としてログイン中');
+      setUser(me.name + ' さん');
       return refreshList();
     }).catch(function() { render(); });
   };
@@ -60,7 +69,7 @@ $(function() {
       if (okText) { message(okText); }
       return r;
     }).catch(function(e) {
-      message('エラー: ' + e.message);
+      message('エラー: ' + e.message, true);
       if (!vattend.isLoggedIn() ) { render(); }
     });
   };
@@ -70,7 +79,7 @@ $(function() {
 
   $('#saveBtn').click(function() {
     var name = $.trim($name.val() );
-    if (!name) { message('名前を入力してください'); return; }
+    if (!name) { message('名前を入力してください', true); return; }
     run(vattend.save(name, getCircuitData() ), '保存しました: ' + name).then(refreshList);
   });
 
@@ -90,31 +99,40 @@ $(function() {
     run(vattend.remove($opt.val() ), '削除しました').then(refreshList);
   });
 
-  setCircuitData({ width: 800, height: 400 });
+  setCircuitData({
+    width: Math.max(600, window.innerWidth - 40),
+    height: Math.max(400, window.innerHeight - 100)
+  });
+  var loginFailed = false;
 
   vattend.handleRedirect().catch(function(e) {
-    message('ログインに失敗しました: ' + e.message);
+    loginFailed = true;
+    message('ログインに失敗しました: ' + e.message, true);
   }).then(function() {
-    if (!/^ログインに失敗/.test($status.text() ) ) { render(); }
-    else { $('#loginBtn').show(); }
+    render();
   });
 });
     </script>
     <title>SimcirJS</title>
   </head>
   <body>
-    <div style="margin-bottom:8px;">
-      <span id="status"></span>
-      <button id="loginBtn" style="display:none;">vattend でログイン</button>
+    <header class="app-header">
+      <span class="app-title">SimcirJS</span>
+      <div class="cloud-ops" style="display:none;">
+        <input id="circuitName" type="text" maxlength="100" placeholder="回路名" />
+        <button id="saveBtn" class="primary">保存</button>
+        <select id="circuitList" aria-label="保存済みの回路"></select>
+        <button id="loadBtn">読み込み</button>
+        <button id="deleteBtn" class="danger">削除</button>
+      </div>
+      <span class="spacer"></span>
+      <span id="status" class="user"></span>
+      <button id="loginBtn" class="primary" style="display:none;">vattend でログイン</button>
       <button id="logoutBtn" style="display:none;">ログアウト</button>
-    </div>
-    <div class="cloud-ops" style="display:none; margin-bottom:8px;">
-      <input id="circuitName" type="text" maxlength="100" placeholder="回路名" />
-      <button id="saveBtn">保存</button>
-      <select id="circuitList"></select>
-      <button id="loadBtn">読み込み</button>
-      <button id="deleteBtn">削除</button>
-    </div>
-    <div id="mySimcir"></div>
+    </header>
+    <main>
+      <div id="mySimcir"></div>
+    </main>
+    <div id="toast" role="status"></div>
   </body>
 </html>
