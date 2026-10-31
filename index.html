@@ -12,6 +12,9 @@
     <link rel="stylesheet" type="text/css" href="simcir-basicset.css" />
     <script type="text/javascript" src="simcir-library.js"></script>
     <script type="text/javascript" src="vattend-client.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800;900&family=Quicksand:wght@600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" type="text/css" href="style.css" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script type="text/javascript">
@@ -146,10 +149,15 @@ $(function() {
     <title>SimcirJS</title>
   </head>
   <body>
+    <div class="bg-blobs" aria-hidden="true">
+      <div class="blob blob-1"></div>
+      <div class="blob blob-2"></div>
+      <div class="blob blob-3"></div>
+    </div>
     <header class="app-header">
-      <span class="app-title">SimcirJS</span>
+      <span class="app-title">🔌 SimcirJS</span>
       <div class="cloud-ops" style="display:none;">
-        <fieldset class="group">
+        <fieldset class="group group-user">
           <legend>ユーザー作成回路</legend>
           <input id="circuitName" type="text" maxlength="100" placeholder="回路名" />
           <button id="saveBtn" class="primary">保存</button>
@@ -158,7 +166,7 @@ $(function() {
           <button id="deleteBtn" class="danger">削除</button>
           <button id="publishBtn" class="staff-only" style="display:none;" title="選択中の回路をサンプル回路として全員に公開">サンプルに登録</button>
         </fieldset>
-        <fieldset class="group">
+        <fieldset class="group group-sample">
           <legend>サンプル回路</legend>
           <select id="sampleList" aria-label="サンプル回路"></select>
           <button id="sampleLoadBtn">読み込み</button>
