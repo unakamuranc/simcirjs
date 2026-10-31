@@ -149,6 +149,10 @@ var vattend = (function() {
     list: function() { return api('GET', '/circuits/').then(function(r) { return r.circuits; }); },
     get: function(id) { return api('GET', '/circuits/' + id + '/'); },
     save: function(name, data) { return api('POST', '/circuits/save/', { name: name, data: data }); },
-    remove: function(id) { return api('DELETE', '/circuits/' + id + '/'); }
+    remove: function(id) { return api('DELETE', '/circuits/' + id + '/'); },
+    listSamples: function() { return api('GET', '/samples/').then(function(r) { return r.samples; }); },
+    getSample: function(id) { return api('GET', '/samples/' + id + '/'); },
+    publishSample: function(circuitId) { return api('POST', '/samples/publish/', { circuit_id: circuitId }); },
+    removeSample: function(id) { return api('DELETE', '/samples/' + id + '/'); }
   };
 }());

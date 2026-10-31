@@ -22,6 +22,8 @@ $(function() {
   var $status = $('#status');
   var $list = $('#circuitList');
   var $name = $('#circuitName');
+  var $samples = $('#sampleList');
+  var canManageSamples = false;
 
   var getCircuitData = function() {
     return JSON.parse($s.controller($simcir.find('.simcir-workspace') ).text() );
@@ -38,15 +40,20 @@ $(function() {
   };
   var setUser = function(text) { $status.text(text); };
 
+  var fillSelect = function($select, items, withDate) {
+    var selected = $select.val();
+    $select.empty();
+    items.forEach(function(c) {
+      var label = withDate ? c.name + '  (' + c.updated_at.slice(0, 16).replace('T', ' ') + ')' : c.name;
+      $('<option>').val(c.id).text(label).data('name', c.name).appendTo($select);
+    });
+    if (selected) { $select.val(selected); }
+  };
+
   var refreshList = function() {
-    return vattend.list().then(function(items) {
-      var selected = $list.val();
-      $list.empty();
-      items.forEach(function(c) {
-        $('<option>').val(c.id).text(c.name + '  (' + c.updated_at.slice(0, 16).replace('T', ' ') + ')').
-          data('name', c.name).appendTo($list);
-      });
-      if (selected) { $list.val(selected); }
+    return Promise.all([vattend.list(), vattend.listSamples()]).then(function(r) {
+      fillSelect($list, r[0], true);
+      fillSelect($samples, r[1], false);
     }).catch(function(e) {
       message('一覧の取得に失敗しました: ' + e.message, true);
     });
@@ -57,9 +64,11 @@ $(function() {
     $('#loginBtn').toggle(!loggedIn);
     $('#logoutBtn').toggle(loggedIn);
     $('.cloud-ops').toggle(loggedIn);
-    if (!loggedIn) { setUser(''); return; }
+    if (!loggedIn) { canManageSamples = false; $('.staff-only').hide(); setUser(''); return; }
     vattend.me().then(function(me) {
-      setUser(me.name + ' さん');
+      canManageSamples = !!me.can_manage_samples;
+      setUser(me.name + ' さん' + (me.is_superuser ? ' (管理者)' : me.is_staff ? ' (スタッフ)' : '') );
+      $('.staff-only').toggle(canManageSamples);
       return refreshList();
     }).catch(function() { render(); });
   };
@@ -93,6 +102,29 @@ $(function() {
     });
   });
 
+  $('#sampleLoadBtn').click(function() {
+    var id = $samples.val();
+    if (!id) { return; }
+    run(vattend.getSample(id), 'サンプルを読み込みました').then(function(c) {
+      if (!c) { return; }
+      setCircuitData(c.data);
+      $name.val(c.name);
+    });
+  });
+
+  $('#publishBtn').click(function() {
+    var $opt = $list.find('option:selected');
+    if (!$opt.length) { message('「ユーザー作成回路」から回路を選択してください', true); return; }
+    if (!confirm('「' + $opt.data('name') + '」をサンプル回路に登録します(同名のサンプルは上書き)。よろしいですか?') ) { return; }
+    run(vattend.publishSample($opt.val() ), 'サンプルに登録しました: ' + $opt.data('name') ).then(refreshList);
+  });
+
+  $('#sampleDeleteBtn').click(function() {
+    var $opt = $samples.find('option:selected');
+    if (!$opt.length || !confirm('サンプル「' + $opt.data('name') + '」を削除しますか?') ) { return; }
+    run(vattend.removeSample($opt.val() ), 'サンプルを削除しました').then(refreshList);
+  });
+
   $('#deleteBtn').click(function() {
     var $opt = $list.find('option:selected');
     if (!$opt.length || !confirm('「' + $opt.data('name') + '」を削除しますか?') ) { return; }
@@ -117,11 +149,21 @@ $(function() {
     <header class="app-header">
       <span class="app-title">SimcirJS</span>
       <div class="cloud-ops" style="display:none;">
-        <input id="circuitName" type="text" maxlength="100" placeholder="回路名" />
-        <button id="saveBtn" class="primary">保存</button>
-        <select id="circuitList" aria-label="保存済みの回路"></select>
-        <button id="loadBtn">読み込み</button>
-        <button id="deleteBtn" class="danger">削除</button>
+        <fieldset class="group">
+          <legend>ユーザー作成回路</legend>
+          <input id="circuitName" type="text" maxlength="100" placeholder="回路名" />
+          <button id="saveBtn" class="primary">保存</button>
+          <select id="circuitList" aria-label="ユーザー作成回路"></select>
+          <button id="loadBtn">読み込み</button>
+          <button id="deleteBtn" class="danger">削除</button>
+          <button id="publishBtn" class="staff-only" style="display:none;" title="選択中の回路をサンプル回路として全員に公開">サンプルに登録</button>
+        </fieldset>
+        <fieldset class="group">
+          <legend>サンプル回路</legend>
+          <select id="sampleList" aria-label="サンプル回路"></select>
+          <button id="sampleLoadBtn">読み込み</button>
+          <button id="sampleDeleteBtn" class="danger staff-only" style="display:none;">削除</button>
+        </fieldset>
       </div>
       <span class="spacer"></span>
       <span id="status" class="user"></span>
