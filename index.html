@@ -27,12 +27,20 @@ $(function() {
   var $name = $('#circuitName');
   var $samples = $('#sampleList');
   var canManageSamples = false;
+  var savedCircuitData = null;
 
   var getCircuitData = function() {
     return JSON.parse($s.controller($simcir.find('.simcir-workspace') ).text() );
   };
+  var cloneCircuitData = function(data) {
+    return JSON.parse(JSON.stringify(data));
+  };
+  var isSameCircuitData = function(data1, data2) {
+    return JSON.stringify(data1) == JSON.stringify(data2);
+  };
   var setCircuitData = function(data) {
     $s.setupSimcir($simcir, data);
+    savedCircuitData = cloneCircuitData(getCircuitData() );
   };
   var toastTimer = null;
   var message = function(text, isError) {
@@ -92,7 +100,11 @@ $(function() {
   $('#saveBtn').click(function() {
     var name = $.trim($name.val() );
     if (!name) { message('名前を入力してください', true); return; }
-    run(vattend.save(name, getCircuitData() ), '保存しました: ' + name).then(refreshList);
+    run(vattend.save(name, getCircuitData() ), '保存しました: ' + name).then(function(r) {
+      if (!r) { return; }
+      savedCircuitData = cloneCircuitData(getCircuitData() );
+      return refreshList();
+    });
   });
 
   $('#loadBtn').click(function() {
@@ -113,6 +125,14 @@ $(function() {
       setCircuitData(c.data);
       $name.val(c.name);
     });
+  });
+
+  $('#clearBtn').click(function() {
+    if (!isSameCircuitData(getCircuitData(), savedCircuitData) &&
+        !confirm('保存されていない変更があります。初期状態に戻しますか?') ) {
+      return;
+    }
+    setCircuitData(savedCircuitData);
   });
 
   $('#publishBtn').click(function() {
@@ -175,6 +195,7 @@ $(function() {
       </div>
       <span class="spacer"></span>
       <span id="status" class="user"></span>
+      <button id="clearBtn">クリア</button>
       <button id="loginBtn" class="primary" style="display:none;">vattend でログイン</button>
       <button id="logoutBtn" style="display:none;">ログアウト</button>
     </header>
